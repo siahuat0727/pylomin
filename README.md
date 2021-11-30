@@ -20,7 +20,7 @@ Or, provide a list of modules via `target_modules`.
 model = pylomin.lazy_loading(model, target_modules=your_target_modules)
 ```
 
-A detailed documentation is undergoing! :)
+A detailed documentation is being prepared! :)
 
 ## Methods
 
