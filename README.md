@@ -33,10 +33,3 @@ A detailed documentation is being prepared! :)
 ### 3. Prefetching
 ...
 
-## Results
-
-```bash
-bash run.sh
-python plot.py
-```
-
