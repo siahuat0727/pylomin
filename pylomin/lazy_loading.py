@@ -5,10 +5,10 @@ from pathlib import Path
 
 import torch
 
-from .utils import maybe_print_memory_trace
+from .utils import maybe_print_gpu_memory_trace
 
 
-@maybe_print_memory_trace
+@maybe_print_gpu_memory_trace
 def lazy_loading(
     model,
     target_instances=None,
@@ -55,6 +55,12 @@ def lazy_loading(
     assert not (target_instances is not None and target_modules is not None), (
         'Can\'t provide both'
     )
+
+    # if target_modules is None:
+    #     target_modules = [
+    #             module
+    #             for module in
+    #     ]
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 

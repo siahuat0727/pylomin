@@ -19,18 +19,20 @@ def pytorch_memory_allocated():
     return torch.cuda.memory_allocated()//1024//1024
 
 
-def maybe_print_memory_trace(func):
+def maybe_print_gpu_memory_trace(func):
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
 
         if kwargs.get('verbose', False):
-            print(f'Before {func.__name__} {pytorch_memory_allocated()} MB')
+            print(f'Before {func.__name__}: '
+                  f'GPU usage {pytorch_memory_allocated()} MB')
 
         res = func(*args, **kwargs)
 
         if kwargs.get('verbose', False):
-            print(f'After  {func.__name__} {pytorch_memory_allocated()} MB')
+            print(f'After  {func.__name__}: '
+                  f'GPU usage {pytorch_memory_allocated()} MB')
 
         return res
 

@@ -17,7 +17,7 @@ def get_model_forward(model, input_ids):
     return forward
 
 
-def get_inference_latency(forward, warmup_repeat=10, repeat=20, verbose=True):
+def get_inference_latency(forward, warmup_repeat=10, repeat=50, verbose=True):
     def repeat_func(func, repeat, verbose, reduce_func=min):
         runtimes = timeit.repeat(
             func,

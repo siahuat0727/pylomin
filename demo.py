@@ -11,7 +11,7 @@ def run(args):
 
     def get_model():
         model = BertModel(BertConfig(
-            vocab_size=123456,
+            vocab_size=119547,
             hidden_size=1024,
             num_hidden_layers=24,
             num_attention_heads=16,
@@ -22,7 +22,7 @@ def run(args):
             model = model.cuda()
         return model
 
-    def get_input(vocab_size=123456, device='cpu'):
+    def get_input(vocab_size=119547, device='cpu'):
         input_ids = torch.randint(
             vocab_size,
             (args.batch_size, args.seq_len),
@@ -33,15 +33,16 @@ def run(args):
 
     def apply_optimization(model):
 
-        if 'group-embedding' in args.method:
-            model = pylomin.grouped_embedding(
+        if 'chunked-embedding' in args.method:
+            model = pylomin.chunked_embedding(
                 model,
                 target_module_name='embeddings.word_embeddings',
-                len_per_group=8000,
+                # chunk_size=8192,
+                chunk_size=4096,
                 verbose=True,
             )
 
-        if 'lazy-load' in args.method:
+        if 'lazy-loading' in args.method:
             # else: Keep a small layer in memory to bypass some troublesome
             # (need to modify huggingface code to fix this)
             skip_modules = [
@@ -68,9 +69,9 @@ def main():
     parser.add_argument('--method',
                         default='naive',
                         choices=['naive',
-                                 'lazy-load',
-                                 'lazy-load+keep-embedding',
-                                 'lazy-load+group-embedding'],
+                                 'lazy-loading',
+                                 'lazy-loading+keep-embedding',
+                                 'lazy-loading+chunked-embedding'],
                         help='')
     parser.add_argument('--check_equal',
                         action='store_true',

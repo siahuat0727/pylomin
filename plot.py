@@ -1,5 +1,8 @@
+import json
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from collections import Counter, defaultdict
 from glob import glob
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -7,59 +10,61 @@ import seaborn as sns
 
 
 def get_result(path):
-    with open(path.replace('#', 'latency')) as f:
-        latency = float(f.readline().strip())
-    with open(path.replace('#', 'memory')) as f:
-        memory = float(f.readline().strip())
-    method, _, batch_size = path.split('/')[-1].split('@')
+    method, batch_size, _ = Path(path).stem.split('@')
+    with open(path) as f:
+        result = json.load(f)
+        latency = float(result['latency'])
+
+    gpu_result_path = path.replace('cpu', 'gpu')
+    assert Path(gpu_result_path).exists(), (
+        'GPU inference is needed for measuring peak memory usage'
+    )
+    with open(gpu_result_path) as f:
+        result_gpu = json.load(f)
+        memory = int(result_gpu['memory'])
+
     return {
         'method': method,
-        'batch_size': batch_size,
-        'peak-memory (MB)': memory,
+        'batch size': batch_size,
         'throughput (sequences/second)': int(batch_size)/latency,
+        'peak memory (MiB)': memory / 1024 / 1024,
     }
 
 
-def get_input(paths):
-    def encode(path):
-        return path.replace('latency', '#').replace('memory', '#')
-
-    counter = Counter([
-        encode(path)
-        for path in paths
-    ])
-    return [k for k, v in counter.items() if v == 2]
-
-
-def main():
-    paths = glob('results/*@*@*')
+def collect_data(paths):
     result_collection = defaultdict(list)
 
-    for target in get_input(paths):
-        for k, v in get_result(target).items():
+    for path in paths:
+        for k, v in get_result(path).items():
             result_collection[k].append(v)
 
-    print(result_collection)
-
     df = pd.DataFrame.from_dict(result_collection)
-
-    df = df.sort_values(by='batch_size', key=pd.to_numeric, kind='stable')
+    df = df.sort_values(by='batch size', key=pd.to_numeric, kind='stable')
     df = df.sort_values(by='method', key=lambda x: x.str.len(), kind='stable')
+    return df
+
+
+def plot():
+
+    df = collect_data(glob('results/*@*@cpu.json'))
     print(df.to_string(index=False))
 
     plt.figure(figsize=(10, 6))
-    g = sns.relplot(x='batch_size', y='peak-memory (MB)', hue='method',
-                    size='throughput (sequences/second)', sizes=(100, 400),
+    g = sns.relplot(x='batch size', y='peak memory (MiB)', hue='method',
+                    size='throughput (sequences/second)', sizes=(100, 800),
                     alpha=0.3, data=df)
+    g.fig.suptitle('Peak memory usage versus batch size')
+    plt.ylim(0, 2500)
 
-    img_path = f'memory.png'
+    img_path = f'peak-memory.png'
     print(f'Save {img_path}')
     plt.savefig(img_path)
 
     plt.figure(figsize=(10, 6))
-    g = sns.relplot(x='batch_size', y='throughput (sequences/second)', hue='method',
-                    size='peak-memory (MB)', sizes=(5, 800),
+    g = sns.relplot(x='batch size', y='throughput (sequences/second)',
+                    hue='method', size='peak memory (MiB)', sizes=(10, 800),
                     alpha=0.3, data=df)
+    g.fig.suptitle('Throughput versus batch size')
     plt.ylim(0, 1.2)
 
     img_path = f'throughput.png'
@@ -67,4 +72,5 @@ def main():
     plt.savefig(img_path)
 
 
-main()
+if __name__ == "__main__":
+    plot()
