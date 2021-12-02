@@ -46,9 +46,9 @@ def run(args):
             # else: Keep a small layer in memory to bypass some troublesome
             # (need to modify huggingface code to fix this)
             skip_modules = [
-                'embeddings.word_embeddings'
+                model.embeddings.word_embeddings
                 if 'keep-embedding' in args.method else
-                'encoder.layer.0.output.LayerNorm'
+                model.encoder.layer[0].output.LayerNorm
             ]
 
             model = pylomin.lazy_loading(

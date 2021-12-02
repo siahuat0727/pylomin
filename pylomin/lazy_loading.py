@@ -13,7 +13,7 @@ def lazy_loading(
     model,
     target_instances=None,
     target_modules=None,
-    skip_modules=None,
+    skip_modules=[],
     output_dir='lazy_loading_weights',
     verbose=False,
 ):
@@ -56,21 +56,24 @@ def lazy_loading(
         'Can\'t provide both'
     )
 
-    # if target_modules is None:
-    #     target_modules = [
-    #             module
-    #             for module in
-    #     ]
+    if target_modules is None:
+        skip_modules = set(skip_modules)
+        target_modules = (
+            module
+            for module in model.modules()
+            if (isinstance(module, target_instances)
+                and module not in skip_modules)
+        )
+    target_modules = set(target_modules)
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     for name, module in model.named_modules():
-        if name in skip_modules:
+        if module not in target_modules:
             continue
         path = os.path.join(output_dir, f'{name}.pt')
-        if isinstance(module, target_instances):
-            module_save_weights(module, path)
-            module_delete_weights(module)
-            module.forward = lazy_loading_wrapper(module.forward, module, path)
+        module_save_weights(module, path)
+        module_delete_weights(module)
+        module.forward = lazy_loading_wrapper(module.forward, module, path)
 
     return model
