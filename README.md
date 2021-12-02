@@ -54,13 +54,35 @@ model = pylomin.chunked_embedding(model,
                                   chunk_size=2048)
 ```
 
-## Demo
+## How to use
+
+Copy or link the `pylomin` directory to your working directory and you can import it like any other Python package:
+
+```python
+import pylomin
+
+...
+model = pylomin.lazy_loading(model, ...)
+...
+```
+
+No need other 3rd party Python libraries except `torch`.
+
+## A demo
 
 We provide a script to measure the peak memory usage and throughput of a model inference with different optimization approaches.
 
 In summary, we can reduce the peak memory by **36×** while maintaining 66% model throughput in our scenario.
 
 ### Execution
+
+Before start, you may need to install the dependencies of this demo:
+
+```bash
+python3 -m pip install requirements.txt
+```
+
+Run script:
 
 ```bash
 bash run.sh
