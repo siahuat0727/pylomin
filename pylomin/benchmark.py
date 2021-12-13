@@ -41,7 +41,7 @@ def get_inference_latency(forward, warmup_repeat=10, repeat=50, verbose=True):
 def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, repeat=50):
 
     model = get_model()
-    input_ids = get_input(device=model.device)
+    input_ids = get_input()
 
     if args.check_equal:
         ground_truth = get_model_forward(model, input_ids)()

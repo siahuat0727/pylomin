@@ -1,15 +1,8 @@
 import functools
-import json
-import os
-import queue
-import threading
 import time
-from functools import partial
-from itertools import chain
 from pathlib import Path
 
-import torch
-
+from .data_porters import data_porter_factory
 from .utils import maybe_print_gpu_memory_trace
 
 
@@ -21,60 +14,31 @@ def lazy_loading(
     skip_modules=[],
     output_dir='lazy_loading_weights',
     prefetch_rule_file=None,
+    device='cpu',
+    storage_device='disk',
     verbose=False,
 ):
-    do_prefetch = prefetch_rule_file is not None
 
-    def module_save_weights(module):
-        torch.save({
-            'parameters': list(module.named_parameters()),
-            'buffers': list(module.named_buffers()),
-        }, module.param_path)
+    def get_data_porter():
+        do_prefetch = prefetch_rule_file is not None
+        data_porter_cls = data_porter_factory.get(
+            (storage_device, do_prefetch))
+        assert data_porter_cls is not None, (
+            f'Not support {device=} {storage_device=}'
+            f'prefetching={do_prefetch}'
+        )
+        return data_porter_cls(model,
+                               computing_device=device,
+                               prefetch_rule_file=prefetch_rule_file)
 
-    def module_delete_weights(module, *_):
-        weight_names = [
-            name
-            for name, _ in chain(
-                module.named_parameters(), module.named_buffers())
-        ]
-        for name in weight_names:
-            setattr(module, name, None)
-        module.loaded = False
-        module.loading = False
-
-    def module_load_weights(module, *_):
-        data = torch.load(module.param_path)
-        for name, param in data['parameters']:
-            module.register_parameter(name, param)
-        for name, buffer in data['buffers']:
-            module.register_buffer(name, buffer)
-        module.loaded = True
-
-    def module_wait_weights(module, *_):
-        # if module.loaded:
-        #     print('Success prefetch! no need to wait')
-        if not module.loading:
-            print(f'Warning, not loading {module.param_path}')
-            module_load_weights(module)
-            return
-        while not module.loaded:
-            assert module.loading
-            time.sleep(0.000001)
-        # print('Not prefetch! wait some time')
+    data_porter = get_data_porter()
 
     def lazy_loading_wrapper(func, module):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
 
             tic = time.time()
-            if do_prefetch:
-                targets = prefetch_rules.get(module, [])
-                for tgt_module in targets:
-                    tgt_module.loading = True
-                    model.queue.put(partial(module_load_weights, tgt_module))
-                module_wait_weights(module)
-            else:
-                module_load_weights(module)
+            data_porter.load_weights(module)
             toc = time.time()
             module.load_time = toc - tic
 
@@ -82,7 +46,7 @@ def lazy_loading(
             res = func(*args, **kwargs)
             module.forward_time = time.time() - tic
 
-            module_delete_weights(module)
+            data_porter.release_weights(module)
             return res
         return wrapper
 
@@ -103,39 +67,16 @@ def lazy_loading(
         )
     target_modules = set(target_modules)
 
-    if do_prefetch:
-
-        name2module = {
-            name: module
-            for name, module in model.named_modules()
-        }
-        with open(prefetch_rule_file) as f:
-            prefetch_rules = {
-                name2module[key]: [name2module[v] for v in value]
-                for key, value in json.load(f).items()
-            }
-
-        def worker():
-            while True:
-                job = model.queue.get()
-                job()
-                model.queue.task_done()
-
-        model.queue = queue.Queue()
-        threading.Thread(target=worker, daemon=True).start()
-
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    for name, module in model.named_modules():
-        if module not in target_modules:
-            continue
-        module.param_path = os.path.join(output_dir, f'{name}.pt')
+    for module in target_modules:
 
-        module_save_weights(module)
-        module_delete_weights(module)
+        data_porter.release_weights(module, first_time=True)
 
         module.forward = lazy_loading_wrapper(module.forward, module)
-        # module.register_forward_pre_hook(module_load_weights)
-        # module.register_forward_hook(module_delete_weights)
+        # module.register_forward_pre_hook(data_porter.load_weights)
+        # module.register_forward_hook(data_porter.release_weights)
+
+    model.to(device)
 
     return model

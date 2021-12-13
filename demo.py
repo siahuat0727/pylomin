@@ -18,11 +18,10 @@ def run(args):
             intermediate_size=4096,
         ))
         model = model.eval()
-        if args.use_gpu:
-            model = model.cuda()
         return model
 
-    def get_input(vocab_size=119547, device='cpu'):
+    def get_input(vocab_size=119547):
+        device = 'cuda' if args.use_gpu else 'cpu'
         input_ids = torch.randint(
             vocab_size,
             (args.batch_size, args.seq_len),
@@ -51,13 +50,16 @@ def run(args):
                 model.encoder.layer[0].output.LayerNorm
             ]
 
+            device = 'cuda' if args.use_gpu else 'cpu'
+
             model = pylomin.lazy_loading(
                 model,
                 target_instances=(nn.Linear, nn.Embedding, nn.LayerNorm),
                 skip_modules=skip_modules,
                 output_dir=args.weight_dir,
-                verbose=True,
                 prefetch_rule_file=args.prefetch_rule_file,
+                device=device,
+                verbose=True,
             )
         return model
 
