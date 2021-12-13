@@ -4,6 +4,9 @@ import timeit
 from pathlib import Path
 
 import torch
+import torch.nn as nn
+
+from .generate_prefetching_rule import generate_prefetching_rule
 
 
 def pytorch_peak_memory_allocated():
@@ -28,12 +31,14 @@ def get_inference_latency(forward, warmup_repeat=10, repeat=50, verbose=True):
             print(runtimes)
         return reduce_func(runtimes)
 
-    # warmup
-    repeat_func(forward, warmup_repeat, verbose=False)
+    if warmup_repeat > 0:
+        print('Warmup... ')
+        repeat_func(forward, warmup_repeat, verbose=False)
+    print('Testing latency...')
     return repeat_func(forward, repeat, verbose=verbose)
 
 
-def evaluate(args, get_model, get_input, apply_optimization):
+def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, repeat=50):
 
     model = get_model()
     input_ids = get_input(device=model.device)
@@ -41,8 +46,29 @@ def evaluate(args, get_model, get_input, apply_optimization):
     if args.check_equal:
         ground_truth = get_model_forward(model, input_ids)()
 
+    skip_modules = [
+        model.embeddings.word_embeddings
+        if 'keep-embedding' in args.method else
+        model.encoder.layer[0].output.LayerNorm
+    ]
+
+    target_instances = (nn.Linear, nn.Embedding, nn.LayerNorm)
+    target_modules = [
+        module
+        for module in model.modules()
+        if (isinstance(module, target_instances)
+            and module not in skip_modules)
+    ]
+
+    if (args.prefetch_rule_file is not None
+            and not os.path.isfile(args.prefetch_rule_file)):
+        generate_prefetching_rule(model, input_ids, target_modules,
+                                  file_path=args.prefetch_rule_file)
+        # TODO lazily move to gpu so that no need to exit and run again
+        print(f'{args.prefetch_rule_file} created, please run again')
+        return
+
     model = apply_optimization(model)
-    torch.cuda.reset_peak_memory_stats()
 
     forward = get_model_forward(model, input_ids)
 
@@ -51,7 +77,19 @@ def evaluate(args, get_model, get_input, apply_optimization):
         print('check correctness passed!')
         return
 
-    latency = get_inference_latency(forward)
+    torch.cuda.reset_peak_memory_stats()
+
+    latency = get_inference_latency(forward, warmup_repeat, repeat)
+
+    print('load time', sum(
+        module.load_time
+        for module in target_modules
+    ))
+    print('forward time', sum(
+        module.forward_time
+        for module in target_modules
+    ))
+
     peak_memory = pytorch_peak_memory_allocated()
     result = {
         'latency': f'{latency:.4f}',

@@ -57,10 +57,12 @@ def run(args):
                 skip_modules=skip_modules,
                 output_dir=args.weight_dir,
                 verbose=True,
+                prefetch_rule_file=args.prefetch_rule_file,
             )
         return model
 
-    pylomin.evaluate(args, get_model, get_input, apply_optimization)
+    pylomin.evaluate(args, get_model, get_input, apply_optimization,
+                     args.warmup_repeat, args.repeat)
 
 
 def main():
@@ -71,6 +73,7 @@ def main():
                         choices=['naive',
                                  'lazy-loading',
                                  'lazy-loading+keep-embedding',
+                                 'lazy-loading+prefetching',
                                  'lazy-loading+chunked-embedding'],
                         help='')
     parser.add_argument('--check_equal',
@@ -87,6 +90,14 @@ def main():
                         type=int,
                         default=512,
                         help='Sequence length')
+    parser.add_argument('--warmup_repeat',
+                        type=int,
+                        default=10,
+                        help='warmup repeat')
+    parser.add_argument('--repeat',
+                        type=int,
+                        default=50,
+                        help='warmup repeat')
     parser.add_argument('--result_dir',
                         default='results',
                         help='Directory to save benchmark results')
@@ -94,8 +105,13 @@ def main():
                         default='weights',
                         help='Directory to save model params '
                              '(for lazy loading)')
+    parser.add_argument('--prefetch_rule_file',
+                        help='')
 
     args = parser.parse_args()
+
+    assert ((args.prefetch_rule_file is None and 'prefetching' not in args.method) or
+            (args.prefetch_rule_file is not None and 'prefetching' in args.method))
 
     run(args)
 
