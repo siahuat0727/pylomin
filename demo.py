@@ -1,3 +1,4 @@
+import os
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 import torch
@@ -5,6 +6,7 @@ import torch.nn as nn
 from transformers import BertConfig, BertModel
 
 import pylomin
+from benchmark import evaluate
 
 
 def run(args):
@@ -36,12 +38,14 @@ def run(args):
             model = pylomin.chunked_embedding(
                 model,
                 target_module_name='embeddings.word_embeddings',
-                # chunk_size=8192,
                 chunk_size=4096,
                 verbose=True,
             )
 
         if 'lazy-loading' in args.method:
+
+            target_instances = (nn.Linear, nn.Embedding, nn.LayerNorm),
+
             # else: Keep a small layer in memory to bypass some troublesome
             # (need to modify huggingface code to fix this)
             skip_modules = [
@@ -50,22 +54,33 @@ def run(args):
                 model.encoder.layer[0].output.LayerNorm
             ]
 
-            device = 'cuda' if args.use_gpu else 'cpu'
+            target_modules = [
+                module
+                for module in model.modules()
+                if (isinstance(module, target_instances)
+                    and module not in skip_modules)
+            ]
+
+            if (args.prefetch_rule_file is not None and
+                    not os.path.isfile(args.prefetch_rule_file)):
+                input_ids = get_input()
+                pylomin.generate_prefetching_rule(
+                    model, input_ids, target_modules,
+                    file_path=args.prefetch_rule_file)
 
             model = pylomin.lazy_loading(
                 model,
-                target_instances=(nn.Linear, nn.Embedding, nn.LayerNorm),
-                skip_modules=skip_modules,
+                target_modules=target_modules,
                 output_dir=args.weight_dir,
                 prefetch_rule_file=args.prefetch_rule_file,
-                device=device,
+                device='cuda' if args.use_gpu else 'cpu',
                 storage_device=args.storage_device,
                 verbose=True,
             )
         return model
 
-    pylomin.evaluate(args, get_model, get_input, apply_optimization,
-                     args.warmup_repeat, args.repeat)
+    evaluate(args, get_model, get_input, apply_optimization,
+             args.warmup_repeat, args.repeat)
 
 
 def main():

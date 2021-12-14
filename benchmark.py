@@ -1,12 +1,11 @@
+import functools
 import json
 import os
+import time
 import timeit
 from pathlib import Path
 
 import torch
-import torch.nn as nn
-
-from .generate_prefetching_rule import generate_prefetching_rule
 
 
 def pytorch_peak_memory_allocated():
@@ -31,11 +30,24 @@ def get_inference_latency(forward, warmup_repeat=10, repeat=50, verbose=True):
             print(runtimes)
         return reduce_func(runtimes)
 
+    assert repeat > 0
+
     if warmup_repeat > 0:
         print('Warmup... ')
         repeat_func(forward, warmup_repeat, verbose=False)
     print('Testing latency...')
     return repeat_func(forward, repeat, verbose=verbose)
+
+
+def record_load_time_wrapper(func):
+    @functools.wraps(func)
+    def wrapper(module, *args, **kwargs):
+        tic = time.time()
+        res = func(module, *args, **kwargs)
+        toc = time.time()
+        module.load_time = toc - tic
+        return res
+    return wrapper
 
 
 def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, repeat=50):
@@ -45,28 +57,6 @@ def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, r
 
     if args.check_equal:
         ground_truth = get_model_forward(model, input_ids)()
-
-    skip_modules = [
-        model.embeddings.word_embeddings
-        if 'keep-embedding' in args.method else
-        model.encoder.layer[0].output.LayerNorm
-    ]
-
-    target_instances = (nn.Linear, nn.Embedding, nn.LayerNorm)
-    target_modules = [
-        module
-        for module in model.modules()
-        if (isinstance(module, target_instances)
-            and module not in skip_modules)
-    ]
-
-    if (args.prefetch_rule_file is not None
-            and not os.path.isfile(args.prefetch_rule_file)):
-        generate_prefetching_rule(model, input_ids, target_modules,
-                                  file_path=args.prefetch_rule_file)
-        # TODO lazily move to gpu so that no need to exit and run again
-        print(f'{args.prefetch_rule_file} created, please run again')
-        return
 
     model = apply_optimization(model)
 
@@ -81,14 +71,10 @@ def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, r
 
     latency = get_inference_latency(forward, warmup_repeat, repeat)
 
-    print('load time', sum(
-        module.load_time
-        for module in target_modules
-    ))
-    print('forward time', sum(
-        module.forward_time
-        for module in target_modules
-    ))
+    # print('load time', sum(
+    #     module.load_time
+    #     for module in target_modules
+    # ))
 
     peak_memory = pytorch_peak_memory_allocated()
     result = {

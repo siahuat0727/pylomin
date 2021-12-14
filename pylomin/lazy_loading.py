@@ -35,6 +35,7 @@ def lazy_loading(
     prefetch_rule_file=None,
     device='cpu',
     storage_device='disk',
+    load_wrapper=None,
     verbose=False,
 ):
 
@@ -43,31 +44,12 @@ def lazy_loading(
         data_porter_cls = data_porter_factory.get(
             (storage_device, do_prefetch))
         assert data_porter_cls is not None, (
-            f'Not support {device=} {storage_device=}'
+            f'Not support {storage_device=}'
             f'prefetching={do_prefetch}'
         )
         return data_porter_cls(model,
                                computing_device=device,
                                prefetch_rule_file=prefetch_rule_file)
-
-    data_porter = get_data_porter()
-
-    def lazy_loading_wrapper(func, module):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-
-            tic = time.time()
-            data_porter.load_weights(module)
-            toc = time.time()
-            module.load_time = toc - tic
-
-            tic = time.time()
-            res = func(*args, **kwargs)
-            module.forward_time = time.time() - tic
-
-            data_porter.release_weights(module)
-            return res
-        return wrapper
 
     assert target_instances is not None or target_modules is not None, (
         'Must provide either one'
@@ -88,13 +70,16 @@ def lazy_loading(
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    for module in target_modules:
+    data_porter = get_data_porter()
+    load_weights_hook = data_porter.load_weights
+    if load_wrapper is not None:
+        load_weights_hook = load_wrapper(load_weights_hook)
 
+    for module in target_modules:
         data_porter.release_weights(module, first_time=True)
 
-        module.forward = lazy_loading_wrapper(module.forward, module)
-        # module.register_forward_pre_hook(data_porter.load_weights)
-        # module.register_forward_hook(data_porter.release_weights)
+        module.register_forward_pre_hook(load_weights_hook)
+        module.register_forward_hook(data_porter.release_weights)
 
     # For those with parameters but not in target_modules,
     # move to compute device
