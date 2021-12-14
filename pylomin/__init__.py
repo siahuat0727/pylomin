@@ -1,3 +1,3 @@
-from .benchmark import evaluate
 from .chunked_embedding import chunked_embedding
+from .generate_prefetching_rule import generate_prefetching_rule
 from .lazy_loading import lazy_loading

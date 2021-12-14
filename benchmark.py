@@ -1,5 +1,7 @@
+import functools
 import json
 import os
+import time
 import timeit
 from pathlib import Path
 
@@ -28,21 +30,35 @@ def get_inference_latency(forward, warmup_repeat=10, repeat=50, verbose=True):
             print(runtimes)
         return reduce_func(runtimes)
 
-    # warmup
-    repeat_func(forward, warmup_repeat, verbose=False)
+    assert repeat > 0
+
+    if warmup_repeat > 0:
+        print('Warmup... ')
+        repeat_func(forward, warmup_repeat, verbose=False)
+    print('Testing latency...')
     return repeat_func(forward, repeat, verbose=verbose)
 
 
-def evaluate(args, get_model, get_input, apply_optimization):
+def record_load_time_wrapper(func):
+    @functools.wraps(func)
+    def wrapper(module, *args, **kwargs):
+        tic = time.time()
+        res = func(module, *args, **kwargs)
+        toc = time.time()
+        module.load_time = toc - tic
+        return res
+    return wrapper
+
+
+def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, repeat=50):
 
     model = get_model()
-    input_ids = get_input(device=model.device)
+    input_ids = get_input()
 
     if args.check_equal:
         ground_truth = get_model_forward(model, input_ids)()
 
     model = apply_optimization(model)
-    torch.cuda.reset_peak_memory_stats()
 
     forward = get_model_forward(model, input_ids)
 
@@ -51,7 +67,15 @@ def evaluate(args, get_model, get_input, apply_optimization):
         print('check correctness passed!')
         return
 
-    latency = get_inference_latency(forward)
+    torch.cuda.reset_peak_memory_stats()
+
+    latency = get_inference_latency(forward, warmup_repeat, repeat)
+
+    # print('load time', sum(
+    #     module.load_time
+    #     for module in target_modules
+    # ))
+
     peak_memory = pytorch_peak_memory_allocated()
     result = {
         'latency': f'{latency:.4f}',
