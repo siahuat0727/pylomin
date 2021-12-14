@@ -23,12 +23,10 @@ def run(args):
         return model
 
     def get_input(vocab_size=119547):
-        device = 'cuda' if args.use_gpu else 'cpu'
         input_ids = torch.randint(
             vocab_size,
             (args.batch_size, args.seq_len),
             dtype=torch.long,
-            device=device
         )
         return input_ids
 
@@ -73,10 +71,12 @@ def run(args):
                 target_modules=target_modules,
                 output_dir=args.weight_dir,
                 prefetch_rule_file=args.prefetch_rule_file,
-                device='cuda' if args.use_gpu else 'cpu',
+                device=args.device,
                 storage_device=args.storage_device,
                 verbose=True,
             )
+        else:
+            model.to(args.device)
         return model
 
     evaluate(args, get_model, get_input, apply_optimization,
@@ -97,9 +97,9 @@ def main():
     parser.add_argument('--check_equal',
                         action='store_true',
                         help="Whether to check equality")
-    parser.add_argument('--use_gpu',
-                        action='store_true',
-                        help="Whether to use gpu")
+    parser.add_argument('--device',
+                        default='cpu',
+                        help="Computing device")
     parser.add_argument('--storage_device',
                         default='disk',
                         help='Storage device')

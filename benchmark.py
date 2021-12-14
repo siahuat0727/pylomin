@@ -59,6 +59,7 @@ def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, r
         ground_truth = get_model_forward(model, input_ids)()
 
     model = apply_optimization(model)
+    input_ids = input_ids.to(args.device)
 
     forward = get_model_forward(model, input_ids)
 
@@ -70,13 +71,8 @@ def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, r
     torch.cuda.reset_peak_memory_stats()
 
     latency = get_inference_latency(forward, warmup_repeat, repeat)
-
-    # print('load time', sum(
-    #     module.load_time
-    #     for module in target_modules
-    # ))
-
     peak_memory = pytorch_peak_memory_allocated()
+
     result = {
         'latency': f'{latency:.4f}',
         'memory': f'{peak_memory}',
@@ -84,10 +80,9 @@ def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, r
 
     Path(args.result_dir).mkdir(parents=True, exist_ok=True)
 
-    device = 'gpu' if args.use_gpu else 'cpu'
     path = os.path.join(
         args.result_dir,
-        f'{args.method}@{args.batch_size}@{device}.json'
+        f'{args.method}@{args.batch_size}@{args.device}.json'
     )
 
     with open(path, 'w') as f:

@@ -15,7 +15,7 @@ def get_result(path):
         result = json.load(f)
         latency = float(result['latency'])
 
-    gpu_result_path = path.replace('cpu', 'gpu')
+    gpu_result_path = path.replace('cpu', 'cuda')
     assert Path(gpu_result_path).exists(), (
         'GPU inference is needed for measuring peak memory usage'
     )
