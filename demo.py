@@ -59,6 +59,7 @@ def run(args):
                 output_dir=args.weight_dir,
                 prefetch_rule_file=args.prefetch_rule_file,
                 device=device,
+                storage_device=args.storage_device,
                 verbose=True,
             )
         return model
@@ -84,6 +85,9 @@ def main():
     parser.add_argument('--use_gpu',
                         action='store_true',
                         help="Whether to use gpu")
+    parser.add_argument('--storage_device',
+                        default='disk',
+                        help='Storage device')
     parser.add_argument('--batch_size',
                         type=int,
                         default=1,
