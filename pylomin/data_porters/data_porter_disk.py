@@ -14,8 +14,8 @@ class DataPorterDisk(DataPorter):
     def _save_weights(self, module):
         module = module.to(self.computing_device)
         torch.save({
-            'parameters': list(module.named_parameters()),
-            'buffers': list(module.named_buffers()),
+            'parameters': list(self.get_direct_parameters(module)),
+            'buffers': list(self.get_direct_buffers(module)),
         }, self.get_save_path(module))
 
     def release_weights(self, module, *_, first_time=False):
@@ -25,7 +25,9 @@ class DataPorterDisk(DataPorter):
         weight_names = [
             name
             for name, _ in chain(
-                module.named_parameters(), module.named_buffers())
+                self.get_direct_parameters(module),
+                self.get_direct_buffers(module)
+            )
         ]
         for name in weight_names:
             setattr(module, name, None)

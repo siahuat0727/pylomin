@@ -18,3 +18,11 @@ class DataPorter:
     def get_save_path(self, module):
         return os.path.join(self.weight_dir,
                             f'{self.module2name[module]}.pt')
+
+    def get_direct_parameters(self, module):
+        # TODO: Don't access protected attribute (check if name contains dot?)
+        return module._parameters.items()
+
+    def get_direct_buffers(self, module):
+        # TODO: Don't access protected attribute (check if name contains dot?)
+        return module._buffers.items()
