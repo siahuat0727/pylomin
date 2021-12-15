@@ -87,4 +87,5 @@ def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, r
 
     with open(path, 'w') as f:
         json.dump(result, f)
-    print(args.method, result)
+    print(args.method, f'{args.device}+{args.storage_device}', result)
+    print()
