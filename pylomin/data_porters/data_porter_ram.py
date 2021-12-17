@@ -9,8 +9,12 @@ class DataPorterRAM(DataPorter):
 
     def _move_weights(self, module, device):
         for _, param in self.get_direct_parameters(module):
+            if param is None:
+                continue
             param.data = param.to(device)
         for _, buffer in self.get_direct_buffers(module):
+            if buffer is None:
+                continue
             buffer.data = buffer.to(device)
 
     def release_weights(self, module, *_, **_kwargs):

@@ -18,11 +18,26 @@ def to_device(module, device, skip_modules=[]):
         # TODO: Don't access protected attribute
         for name, tensor in chain(module._parameters.items(),
                                   module._buffers.items()):
+            if tensor is None:
+                continue
             tensor.data = tensor.data.to(device)
         for child_module in module.children():
             do_to_device(child_module)
 
     do_to_device(module)
+
+
+def get_default_target_modules(model, skip_modules=[]):
+    def has_direct_weights(module):
+        # TODO: Don't access protected attribute
+        return module._parameters or module._buffers
+
+    return (
+        module
+        for module in model.modules()
+        if (has_direct_weights(module) and
+            module not in skip_modules)
+    )
 
 
 @maybe_print_gpu_memory_trace
@@ -51,14 +66,10 @@ def lazy_loading(
                                computing_device=device,
                                prefetch_rule_file=prefetch_rule_file)
 
-    assert target_instances is not None or target_modules is not None, (
-        'Must provide either one'
-    )
-    assert not (target_instances is not None and target_modules is not None), (
-        'Can\'t provide both'
-    )
-
-    if target_modules is None:
+    if target_instances is not None:
+        assert target_modules is None, (
+            'Can\'t accept both target_instances and target_modules'
+        )
         skip_modules = set(skip_modules)
         target_modules = (
             module
@@ -66,6 +77,10 @@ def lazy_loading(
             if (isinstance(module, target_instances)
                 and module not in skip_modules)
         )
+    if target_modules is None:
+        target_modules = get_default_target_modules(model,
+                                                    skip_modules=skip_modules)
+
     target_modules = set(target_modules)
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
