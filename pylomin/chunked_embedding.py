@@ -8,7 +8,6 @@ class ChunkedEmbedding(nn.Module):
     def __init__(self, embedding, chunk_size=1000, device=None, dtype=None):
         super().__init__()
 
-        self._device = device if device is not None else embedding.weight.device
         self._dtype = dtype if dtype is not None else embedding.weight.dtype
         self.chunk_size = chunk_size
 
@@ -42,8 +41,8 @@ class ChunkedEmbedding(nn.Module):
 
     def forward(self, input_):
         output = torch.empty((*input_.size(), self.embedding_dim),
-                             device=self._device, dtype=self._dtype)
-        group = input_ // self.chunk_size
+                             device=input_.device, dtype=self._dtype)
+        group = input_.div(self.chunk_size, rounding_mode='floor')
 
         for group_i in group.unique():
             group_indice = (group == group_i).nonzero(as_tuple=True)
