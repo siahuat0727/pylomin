@@ -11,25 +11,6 @@ from benchmark import evaluate
 
 def run(args):
 
-    def get_model():
-        model = BertModel(BertConfig(
-            vocab_size=119547,
-            hidden_size=1024,
-            num_hidden_layers=24,
-            num_attention_heads=16,
-            intermediate_size=4096,
-        ))
-        model = model.eval()
-        return model
-
-    def get_input(vocab_size=119547):
-        input_ids = torch.randint(
-            vocab_size,
-            (args.batch_size, args.seq_len),
-            dtype=torch.long,
-        )
-        return input_ids
-
     def apply_optimization(model):
 
         if 'chunked-embedding' in args.method:
@@ -42,7 +23,7 @@ def run(args):
 
         if 'lazy-loading' in args.method:
 
-            target_instances = (nn.Linear, nn.Embedding, nn.LayerNorm),
+            target_classes = (nn.Linear, nn.Embedding, nn.LayerNorm),
 
             # else: Keep a small layer in memory to bypass some troublesome
             # (need to modify huggingface code to fix this)
@@ -55,13 +36,13 @@ def run(args):
             target_modules = [
                 module
                 for module in model.modules()
-                if (isinstance(module, target_instances)
+                if (isinstance(module, target_classes)
                     and module not in skip_modules)
             ]
 
             if (args.prefetch_rule_file is not None and
                     not os.path.isfile(args.prefetch_rule_file)):
-                input_ids = get_input()
+                input_ids = get_input().to(args.device)
                 pylomin.generate_prefetching_rule(
                     model, input_ids, target_modules,
                     file_path=args.prefetch_rule_file)
@@ -72,14 +53,30 @@ def run(args):
                 output_dir=args.weight_dir,
                 prefetch_rule_file=args.prefetch_rule_file,
                 device=args.device,
-                storage_device=args.storage_device,
+                storage=args.storage,
                 verbose=True,
             )
         else:
             model.to(args.device)
         return model
 
-    evaluate(args, get_model, get_input, apply_optimization,
+    vocab_size = 119547
+
+    model = BertModel(BertConfig(
+        vocab_size=vocab_size,
+        hidden_size=1024,
+        num_hidden_layers=24,
+        num_attention_heads=16,
+        intermediate_size=4096,
+    )).eval()
+
+    input_ids = torch.randint(
+        vocab_size,
+        (args.batch_size, args.seq_len),
+        dtype=torch.long,
+    )
+
+    evaluate(args, model, input_ids, apply_optimization,
              args.warmup_repeat, args.repeat)
 
 
@@ -100,7 +97,7 @@ def main():
     parser.add_argument('--device',
                         default='cpu',
                         help="Computing device")
-    parser.add_argument('--storage_device',
+    parser.add_argument('--storage',
                         default='disk',
                         help='Storage device')
     parser.add_argument('--batch_size',

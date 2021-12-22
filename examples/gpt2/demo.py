@@ -13,7 +13,7 @@ def main(args):
         model = pylomin.chunked_embedding(model, 'wte', chunk_size=4096)
         model = pylomin.chunked_embedding(model, 'wpe', chunk_size=4096)
     if 'lazy-loading' in args.method:
-        model = pylomin.lazy_loading(model, device='cuda', storage_device='RAM')
+        model = pylomin.lazy_loading(model, device='cuda', storage='cpu')
     else:
         model = model.cuda()
 

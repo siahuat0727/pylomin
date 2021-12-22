@@ -50,10 +50,7 @@ def record_load_time_wrapper(func):
     return wrapper
 
 
-def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, repeat=50):
-
-    model = get_model()
-    input_ids = get_input()
+def evaluate(args, model, input_ids, apply_optimization, warmup_repeat=10, repeat=50):
 
     if args.check_equal:
         ground_truth = get_model_forward(model, input_ids)()
@@ -87,5 +84,6 @@ def evaluate(args, get_model, get_input, apply_optimization, warmup_repeat=10, r
 
     with open(path, 'w') as f:
         json.dump(result, f)
-    print(args.method, f'{args.device}+{args.storage_device}', result)
+    print(args.method, f'{args.device}+{args.storage}', result,
+          f'{peak_memory/1024/1024:.2f} MiB')
     print()

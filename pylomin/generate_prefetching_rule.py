@@ -79,7 +79,7 @@ def generate_prefetching_rule(model, input_ids, target_modules,
     model = lazy_loading(model,
                          target_modules=target_modules,
                          device='cuda',
-                         storage_device='RAM',
+                         storage='cpu',
                          load_wrapper=record_load_mem_wrapper)
     record_peak_memory(target_modules)
     module_order = record_module_order(target_modules)

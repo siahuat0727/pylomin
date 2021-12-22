@@ -43,13 +43,13 @@ def get_default_target_modules(model, skip_modules=[]):
 @maybe_print_gpu_memory_trace
 def lazy_loading(
     model,
-    target_instances=None,
+    target_classes=None,
     target_modules=None,
     skip_modules=[],
     output_dir='lazy_loading_weights',
     prefetch_rule_file=None,
     device='cpu',
-    storage_device='disk',
+    storage='cpu',
     load_wrapper=None,
     verbose=False,
 ):
@@ -57,24 +57,24 @@ def lazy_loading(
     def get_data_porter():
         do_prefetch = prefetch_rule_file is not None
         data_porter_cls = data_porter_factory.get(
-            (storage_device, do_prefetch))
+            (storage, do_prefetch))
         assert data_porter_cls is not None, (
-            f'Not support {storage_device=}'
+            f'Not support {storage=}'
             f'prefetching={do_prefetch}'
         )
         return data_porter_cls(model,
                                computing_device=device,
                                prefetch_rule_file=prefetch_rule_file)
 
-    if target_instances is not None:
+    if target_classes is not None:
         assert target_modules is None, (
-            'Can\'t accept both target_instances and target_modules'
+            'Can\'t accept both target_classes and target_modules'
         )
         skip_modules = set(skip_modules)
         target_modules = (
             module
             for module in model.modules()
-            if (isinstance(module, target_instances)
+            if (isinstance(module, target_classes)
                 and module not in skip_modules)
         )
     if target_modules is None:

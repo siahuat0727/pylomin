@@ -2,7 +2,7 @@ from .data_porter import DataPorter
 from .prefetching_mixin import PrefetchingMixin
 
 
-class DataPorterRAM(DataPorter):
+class DataPorterCPU(DataPorter):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -25,5 +25,5 @@ class DataPorterRAM(DataPorter):
 
 
 # TODO check Tensor.to(non_blocking=True)
-class DataPorterRAMPrefetching(PrefetchingMixin, DataPorterRAM):
+class DataPorterCPUPrefetching(PrefetchingMixin, DataPorterCPU):
     pass
