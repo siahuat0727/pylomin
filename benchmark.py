@@ -72,7 +72,9 @@ def evaluate(args, model, input_ids, apply_optimization, warmup_repeat=10, repea
 
     result = {
         'latency': f'{latency:.4f}',
-        'memory': f'{peak_memory}',
+        'batch-size': args.batch_size,
+        'throughput': f'{args.batch_size/latency:.2f}',
+        'memory': peak_memory,
     }
 
     Path(args.result_dir).mkdir(parents=True, exist_ok=True)
@@ -84,6 +86,7 @@ def evaluate(args, model, input_ids, apply_optimization, warmup_repeat=10, repea
 
     with open(path, 'w') as f:
         json.dump(result, f)
-    print(args.method, f'{args.device}+{args.storage}', result,
-          f'{peak_memory/1024/1024:.2f} MiB')
+    print(args.method, f'{args.device}+{args.storage}', result)
+    print(f'Peak memory: {peak_memory/1024/1024:.2f} MiB')
+    print(f'Throughput: {args.batch_size/latency:.3f} seq/s')
     print()
