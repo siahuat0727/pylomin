@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
 
-from .utils import maybe_print_gpu_memory_trace, rgetattr, rsetattr
+from .utils import rgetattr, rsetattr
 
 
 class ChunkedEmbedding(nn.Module):
-    def __init__(self, embedding, chunk_size=1000, device=None, dtype=None):
+    def __init__(self, embedding, chunk_size=1000, dtype=None):
         super().__init__()
 
         self._dtype = dtype if dtype is not None else embedding.weight.dtype
@@ -52,8 +52,7 @@ class ChunkedEmbedding(nn.Module):
         return output
 
 
-@maybe_print_gpu_memory_trace
-def chunked_embedding(model, target_module_name, chunk_size=8000, verbose=False):
+def chunked_embedding(model, target_module_name, chunk_size=4096):
     r""" Attempts to split an `torch.nn.Embedding` layer into multiple chunks of `torch.nn.Embedding` with smaller `num_embeddings`.
     The `num_embeddings` of all chunks will be equal to `chunk_size`, except the last one.
     """
@@ -67,13 +66,12 @@ def chunked_embedding(model, target_module_name, chunk_size=8000, verbose=False)
     return model
 
 
-if __name__ == '__main__':
+def test_chunked_embedding():
     embedding = nn.Embedding(42, 10)
     indices = torch.arange(42).view(2, 21)
     ground_truth = embedding(indices)
 
     chunked_emedding = ChunkedEmbedding(embedding, chunk_size=5)
-    output = chunked_emedding(indices)
+    result = chunked_emedding(indices)
 
-    assert output.equal(ground_truth)
-    print('Passed!')
+    assert result.equal(ground_truth)

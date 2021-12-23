@@ -55,8 +55,8 @@ def evaluate(args, model, input_ids, apply_optimization, warmup_repeat=10, repea
     if args.check_equal:
         ground_truth = get_model_forward(model, input_ids)()
 
-    model = apply_optimization(model)
     input_ids = input_ids.to(args.device)
+    model = apply_optimization(model, input_ids)
 
     forward = get_model_forward(model, input_ids)
 

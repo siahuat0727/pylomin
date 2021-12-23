@@ -1,10 +1,7 @@
-import functools
-import time
 from itertools import chain
 from pathlib import Path
 
 from .data_porters import data_porter_factory
-from .utils import maybe_print_gpu_memory_trace
 
 
 def to_device(module, device, skip_modules=None):
@@ -18,7 +15,7 @@ def to_device(module, device, skip_modules=None):
         if module in skip_modules:
             return
         # TODO: Don't access protected attribute
-        for name, tensor in chain(module._parameters.items(),
+        for _, tensor in chain(module._parameters.items(),
                                   module._buffers.items()):
             if tensor is None:
                 continue
@@ -44,18 +41,16 @@ def get_default_target_modules(model, skip_modules=None):
     )
 
 
-@maybe_print_gpu_memory_trace
 def lazy_loading(
     model,
     target_classes=None,
     target_modules=None,
     skip_modules=None,
-    output_dir='lazy_loading_weights',
-    prefetch_rule_file=None,
     device='cpu',
     storage='cpu',
     load_wrapper=None,
-    verbose=False,
+    output_dir='lazy_loading_weights',
+    prefetch_rule_file=None,
 ):
     if skip_modules is None:
         skip_modules = []

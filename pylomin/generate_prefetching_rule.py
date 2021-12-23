@@ -1,11 +1,8 @@
 import copy
 import functools
 import json
-import os
 from collections import defaultdict
-from functools import partial
-from itertools import accumulate, chain
-from pathlib import Path
+from itertools import accumulate
 
 import torch
 
@@ -64,11 +61,11 @@ def record_load_mem_wrapper(func):
 def generate_prefetching_rule(model, input_ids, target_modules,
                               target_peak_memory=None,
                               file_path='prefetch_rule.json'):
-    target_module_names = set(
+    target_module_names = {
         name
         for name, module in model.named_modules()
         if module in target_modules
-    )
+    }
     model = copy.deepcopy(model)
     target_modules = [
         module

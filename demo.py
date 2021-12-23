@@ -11,30 +11,13 @@ from benchmark import evaluate
 
 def run(args):
 
-    vocab_size = 119547
-
-    model = BertModel(BertConfig(
-        vocab_size=vocab_size,
-        hidden_size=1024,
-        num_hidden_layers=24,
-        num_attention_heads=16,
-        intermediate_size=4096,
-    )).eval()
-
-    input_ids = torch.randint(
-        vocab_size,
-        (args.batch_size, args.seq_len),
-        dtype=torch.long,
-    )
-
-    def apply_optimization(model):
+    def apply_optimization(model, input_ids):
 
         if 'chunked-embedding' in args.method:
             model = pylomin.chunked_embedding(
                 model,
                 target_module_name='embeddings.word_embeddings',
                 chunk_size=4096,
-                verbose=True,
             )
 
         if 'lazy-loading' in args.method:
@@ -58,7 +41,6 @@ def run(args):
 
             if (args.prefetch_rule_file is not None and
                     not os.path.isfile(args.prefetch_rule_file)):
-                input_ids = input_ids.to(args.device)
                 pylomin.generate_prefetching_rule(
                     model, input_ids, target_modules,
                     file_path=args.prefetch_rule_file)
@@ -70,11 +52,26 @@ def run(args):
                 prefetch_rule_file=args.prefetch_rule_file,
                 device=args.device,
                 storage=args.storage,
-                verbose=True,
             )
         else:
             model.to(args.device)
         return model
+
+    vocab_size = 119547
+
+    model = BertModel(BertConfig(
+        vocab_size=vocab_size,
+        hidden_size=1024,
+        num_hidden_layers=24,
+        num_attention_heads=16,
+        intermediate_size=4096,
+    )).eval()
+
+    input_ids = torch.randint(
+        vocab_size,
+        (args.batch_size, args.seq_len),
+        dtype=torch.long,
+    )
 
     evaluate(args, model, input_ids, apply_optimization,
              args.warmup_repeat, args.repeat)
@@ -128,8 +125,10 @@ def main():
 
     args = parser.parse_args()
 
-    assert ((args.prefetch_rule_file is None and 'prefetching' not in args.method) or
-            (args.prefetch_rule_file is not None and 'prefetching' in args.method))
+    if 'prefetching' in args.method:
+        assert args.prefetch_rule_file is not None, (
+            'Please provide prefetch_rule_file'
+        )
 
     run(args)
 
