@@ -11,6 +11,22 @@ from benchmark import evaluate
 
 def run(args):
 
+    vocab_size = 119547
+
+    model = BertModel(BertConfig(
+        vocab_size=vocab_size,
+        hidden_size=1024,
+        num_hidden_layers=24,
+        num_attention_heads=16,
+        intermediate_size=4096,
+    )).eval()
+
+    input_ids = torch.randint(
+        vocab_size,
+        (args.batch_size, args.seq_len),
+        dtype=torch.long,
+    )
+
     def apply_optimization(model):
 
         if 'chunked-embedding' in args.method:
@@ -42,7 +58,7 @@ def run(args):
 
             if (args.prefetch_rule_file is not None and
                     not os.path.isfile(args.prefetch_rule_file)):
-                input_ids = get_input().to(args.device)
+                input_ids = input_ids.to(args.device)
                 pylomin.generate_prefetching_rule(
                     model, input_ids, target_modules,
                     file_path=args.prefetch_rule_file)
@@ -59,22 +75,6 @@ def run(args):
         else:
             model.to(args.device)
         return model
-
-    vocab_size = 119547
-
-    model = BertModel(BertConfig(
-        vocab_size=vocab_size,
-        hidden_size=1024,
-        num_hidden_layers=24,
-        num_attention_heads=16,
-        intermediate_size=4096,
-    )).eval()
-
-    input_ids = torch.randint(
-        vocab_size,
-        (args.batch_size, args.seq_len),
-        dtype=torch.long,
-    )
 
     evaluate(args, model, input_ids, apply_optimization,
              args.warmup_repeat, args.repeat)
