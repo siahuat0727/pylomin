@@ -56,7 +56,7 @@ def plot():
     g.fig.suptitle('Peak memory usage versus batch size')
     plt.ylim(0, 2500)
 
-    img_path = f'peak-memory.png'
+    img_path = 'peak-memory.png'
     print(f'Save {img_path}')
     plt.savefig(img_path)
 
@@ -67,7 +67,7 @@ def plot():
     g.fig.suptitle('Throughput versus batch size')
     plt.ylim(0, 1.2)
 
-    img_path = f'throughput.png'
+    img_path = 'throughput.png'
     print(f'Save {img_path}')
     plt.savefig(img_path)
 
