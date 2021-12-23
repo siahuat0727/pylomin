@@ -7,7 +7,9 @@ from .data_porters import data_porter_factory
 from .utils import maybe_print_gpu_memory_trace
 
 
-def to_device(module, device, skip_modules=[]):
+def to_device(module, device, skip_modules=None):
+    if skip_modules is None:
+        skip_modules = []
 
     if device == 'cpu':
         return
@@ -27,7 +29,9 @@ def to_device(module, device, skip_modules=[]):
     do_to_device(module)
 
 
-def get_default_target_modules(model, skip_modules=[]):
+def get_default_target_modules(model, skip_modules=None):
+    if skip_modules is None:
+        skip_modules = []
     def has_direct_weights(module):
         # TODO: Don't access protected attribute
         return module._parameters or module._buffers
@@ -45,7 +49,7 @@ def lazy_loading(
     model,
     target_classes=None,
     target_modules=None,
-    skip_modules=[],
+    skip_modules=None,
     output_dir='lazy_loading_weights',
     prefetch_rule_file=None,
     device='cpu',
@@ -53,6 +57,8 @@ def lazy_loading(
     load_wrapper=None,
     verbose=False,
 ):
+    if skip_modules is None:
+        skip_modules = []
 
     def get_data_porter():
         do_prefetch = prefetch_rule_file is not None
