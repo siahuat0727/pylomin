@@ -4,9 +4,6 @@ from .prefetching_mixin import PrefetchingMixin
 
 class DataPorterCPU(DataPorter):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def _move_weights(self, module, device):
         for _, param in self.get_direct_parameters(module):
             if param is None:

@@ -8,9 +8,6 @@ from .prefetching_mixin import PrefetchingMixin
 
 class DataPorterDisk(DataPorter):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def _save_weights(self, module):
         module = module.to(self.computing_device)
         torch.save({
