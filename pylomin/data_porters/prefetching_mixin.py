@@ -50,10 +50,7 @@ class PrefetchingMixin:
             self.queue.task_done()
 
     def _get_prefetch_rule(self, path):
-        name2module = {
-            name: module
-            for name, module in self.model.named_modules()
-        }
+        name2module = dict(self.model.named_modules())
         with open(path) as f:
             return {
                 name2module[key]: [name2module[v] for v in value]
