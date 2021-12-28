@@ -46,7 +46,7 @@ No need other 3rd party Python libraries except `torch`.
 
 ### 1. Lazy-loading
 
-Load model parameters only when needed and delete them immediately after use.
+Load model parameters only when needed and release them immediately after use.
 
 ```python
 model = pylomin.lazy_loading(model)
