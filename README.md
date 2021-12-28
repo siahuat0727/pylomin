@@ -59,11 +59,9 @@ model = pylomin.chunked_embedding(model,
 
 ## How to use
 
-Link the `pylomin` directory to your working directory or add it to `PYTHONPATH`,
+Add `pylomin` directory to `PYTHONPATH`,
 
 ```bash
-$ ln -s /path/to/pylomin/pylomin your/working/directory/
-# or
 $ export PYTHONPATH=$PYTHONPATH:/path/to/pylomin
 ```
 
