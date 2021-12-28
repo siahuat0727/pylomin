@@ -40,19 +40,22 @@ class ChunkedEmbedding(nn.Module):
             get_embedding_chunk(i)
             for i in range(0, self.num_embeddings, chunk_size)
         ])
+        self.n_chunk = len(self.embedding_chunks)
 
     @torch.jit.ignore
     def get_size(self, input_) -> List[int]:
         size = [*input_.size(), self.embedding_dim]
         return size
 
+    @staticmethod
     @torch.jit.ignore
-    def update(self, output, group_indice: List[torch.Tensor],
+    def update(output, group_indice: List[torch.Tensor],
                group_output) -> None:
         output[group_indice] = group_output
 
+    @staticmethod
     @torch.jit.ignore
-    def get_group_indice(self, group, group_i: int) -> List[torch.Tensor]:
+    def get_group_indice(group, group_i: int) -> List[torch.Tensor]:
         group_indice = (group == group_i).nonzero(as_tuple=True)
         return group_indice
 

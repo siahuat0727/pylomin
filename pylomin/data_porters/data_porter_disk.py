@@ -1,3 +1,4 @@
+import os
 from itertools import chain
 
 import torch
@@ -6,7 +7,25 @@ from .data_porter import DataPorter
 from .prefetching_mixin import PrefetchingMixin
 
 
+def get_module2name(model):
+    return {
+        module: name
+        for name, module in model.named_modules()
+    }
+
+
 class DataPorterDisk(DataPorter):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.module2name = get_module2name(self.model)
+        self.weight_dir = kwargs.get('weight_dir', 'weights')
+        os.makedirs(self.weight_dir, exist_ok=True)
+
+    def get_save_path(self, module):
+        return os.path.join(self.weight_dir,
+                            f'{self.module2name[module]}.pt')
 
     def _save_weights(self, module):
         module = module.to(self.computing_device)

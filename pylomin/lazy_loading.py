@@ -1,3 +1,4 @@
+import functools
 from itertools import chain
 from pathlib import Path
 
@@ -16,7 +17,7 @@ def to_device(module, device, skip_modules=None):
             return
         # TODO: Don't access protected attribute
         for _, tensor in chain(module._parameters.items(),
-                                  module._buffers.items()):
+                               module._buffers.items()):
             if tensor is None:
                 continue
             tensor.data = tensor.data.to(device)
@@ -29,6 +30,7 @@ def to_device(module, device, skip_modules=None):
 def get_default_target_modules(model, skip_modules=None):
     if skip_modules is None:
         skip_modules = []
+
     def has_direct_weights(module):
         # TODO: Don't access protected attribute
         return module._parameters or module._buffers
@@ -48,10 +50,12 @@ def lazy_loading(
     skip_modules=None,
     device='cpu',
     storage='cpu',
+    jit=False,
     load_wrapper=None,
     output_dir='lazy_loading_weights',
     prefetch_rule_file=None,
 ):
+    r"""jit is needed only to bypass torch.jit.trace bug"""
     if skip_modules is None:
         skip_modules = []
 
@@ -65,7 +69,8 @@ def lazy_loading(
         )
         return data_porter_cls(model,
                                computing_device=device,
-                               prefetch_rule_file=prefetch_rule_file)
+                               prefetch_rule_file=prefetch_rule_file,
+                               weight_dir=output_dir)
 
     if target_classes is not None:
         assert target_modules is None, (
@@ -84,18 +89,31 @@ def lazy_loading(
 
     target_modules = set(target_modules)
 
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
-
     data_porter = get_data_porter()
     load_weights_hook = data_porter.load_weights
     if load_wrapper is not None:
         load_weights_hook = load_wrapper(load_weights_hook)
 
+    def do_lazy_loading(func, module):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            data_porter.load_weights(module)
+            res = func(*args, **kwargs)
+            data_porter.release_weights(module)
+            return res
+        return wrapper
+
     for module in target_modules:
         data_porter.release_weights(module, first_time=True)
 
-        module.register_forward_pre_hook(load_weights_hook)
-        module.register_forward_hook(data_porter.release_weights)
+        if jit:
+            # need to decorate more than once to work properly
+            # TODO dig into torch.jit.trace code to learn more
+            module.forward = do_lazy_loading(module.forward, module)
+            module.forward = do_lazy_loading(module.forward, module)
+        else:
+            module.register_forward_pre_hook(load_weights_hook)
+            module.register_forward_hook(data_porter.release_weights)
 
     # For those with parameters but not in target_modules,
     # move to compute device
