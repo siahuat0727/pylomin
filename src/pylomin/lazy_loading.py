@@ -1,4 +1,3 @@
-import functools
 from itertools import chain
 
 from .data_porters import data_porter_factory
@@ -15,8 +14,8 @@ def to_device(module, device, skip_modules=None):
         if module in skip_modules:
             return
         # TODO: Don't access protected attribute
-        for _, tensor in chain(module._parameters.items(),
-                               module._buffers.items()):
+        for _, tensor in chain(module._parameters.items(),  # pylint: disable=protected-access
+                               module._buffers.items()):  # pylint: disable=protected-access
             if tensor is None:
                 continue
             tensor.data = tensor.data.to(device)
@@ -32,7 +31,7 @@ def get_default_target_modules(model, skip_modules=None):
 
     def has_direct_weights(module):
         # TODO: Don't access protected attribute
-        return module._parameters or module._buffers
+        return module._parameters or module._buffers  # pylint: disable=protected-access
 
     return (
         module
