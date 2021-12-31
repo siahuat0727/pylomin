@@ -86,8 +86,8 @@ def generate_prefetching_rule(model, input_ids, target_modules,
 
     if len(target_modules) != len(module_order):
         raise AssertionError(
-            (len(target_modules), len(module_order)
-        ))
+            (len(target_modules), len(module_order))
+        )
 
     peak_memory_list = [module.peak_memory for module in module_order]
 
