@@ -61,19 +61,21 @@ def lazy_loading(
         do_prefetch = prefetch_rule_file is not None
         data_porter_cls = data_porter_factory.get(
             (storage, do_prefetch))
-        assert data_porter_cls is not None, (
-            f'Not support storage={storage}'
-            f'prefetching={do_prefetch}'
-        )
+        if data_porter_cls is None:
+            raise AssertionError(
+                f'Not support storage={storage}'
+                f'prefetching={do_prefetch}'
+            )
         return data_porter_cls(model,
                                computing_device=device,
                                prefetch_rule_file=prefetch_rule_file,
                                weight_dir=output_dir)
 
     if target_classes is not None:
-        assert target_modules is None, (
-            'Can\'t accept both target_classes and target_modules'
-        )
+        if target_modules is not None:
+            raise AssertionError(
+                'Can\'t accept both target_classes and target_modules'
+            )
         skip_modules = set(skip_modules)
         target_modules = (
             module
