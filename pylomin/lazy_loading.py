@@ -107,13 +107,13 @@ def lazy_loading(
         data_porter.release_weights(module, first_time=True)
 
         if jit:
-            # need to decorate more than once to work properly
+            # https://github.com/pytorch/pytorch/issues/70511
+            # need to do more than once to work properly
             # TODO dig into torch.jit.trace code to learn more
-            module.forward = do_lazy_loading(module.forward, module)
-            module.forward = do_lazy_loading(module.forward, module)
-        else:
             module.register_forward_pre_hook(load_weights_hook)
             module.register_forward_hook(data_porter.release_weights)
+        module.register_forward_pre_hook(load_weights_hook)
+        module.register_forward_hook(data_porter.release_weights)
 
     # For those with parameters but not in target_modules,
     # move to compute device
