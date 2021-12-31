@@ -22,12 +22,12 @@ def get_model_and_input():
 @pytest.mark.parametrize(
     "device, storage, is_jit",
     [
-        ('cuda', 'cpu', False),
-        ('cuda', 'disk', False),
+        # ('cuda', 'cpu', False),
+        # ('cuda', 'disk', False),
         ('cpu', 'disk', False),
         # ('cuda', 'cpu', True),
         # TODO ('cuda', 'disk', True),
-        # ('cpu', 'disk', True),
+        ('cpu', 'disk', True),
     ]
 )
 def test_lazyloading(device, storage, is_jit):
