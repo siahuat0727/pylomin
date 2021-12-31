@@ -63,7 +63,7 @@ def lazy_loading(
         data_porter_cls = data_porter_factory.get(
             (storage, do_prefetch))
         assert data_porter_cls is not None, (
-            f'Not support {storage=}'
+            f'Not support storage={storage}'
             f'prefetching={do_prefetch}'
         )
         return data_porter_cls(model,
