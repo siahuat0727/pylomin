@@ -103,9 +103,10 @@ def chunked_embedding(model, target_module_name, chunk_size=4096):
     The `num_embeddings` of all chunks will be equal to `chunk_size`, except the last one.
     """
     old_embedding = rgetattr(model, target_module_name)
-    assert isinstance(old_embedding, nn.Embedding), (
-        f'{target_module_name} is not an nn.Embedding'
-    )
+    if not isinstance(old_embedding, nn.Embedding):
+        raise AssertionError(
+            f'{target_module_name} is not an nn.Embedding'
+        )
     new_embedding = ChunkedEmbedding(old_embedding,
                                      chunk_size=chunk_size)
     rsetattr(model, target_module_name, new_embedding)

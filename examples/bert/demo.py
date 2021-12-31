@@ -126,9 +126,10 @@ def main():
     args = parser.parse_args()
 
     if 'prefetching' in args.method:
-        assert args.prefetch_rule_file is not None, (
-            'Please provide prefetch_rule_file'
-        )
+        if args.prefetch_rule_file is None:
+            raise AssertionError(
+                'Please provide prefetch_rule_file'
+            )
 
     run(args)
 

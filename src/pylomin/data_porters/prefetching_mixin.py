@@ -40,7 +40,8 @@ class PrefetchingMixin:
             self._do_load_and_setflag(module)
             return
         while not module.loaded:
-            assert module.loading
+            if not module.loading:
+                raise AssertionError
             time.sleep(0.000001)
 
     def _worker(self):
