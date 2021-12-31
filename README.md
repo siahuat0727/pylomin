@@ -25,22 +25,9 @@ The goal of this library is to enable low-cost deployment of deep learning model
 
 ## Installation
 
-Add `pylomin` directory to `PYTHONPATH`,
-
 ```bash
-$ export PYTHONPATH=$PYTHONPATH:/path/to/pylomin
+pylomin$ python3 -m pip install -e .
 ```
-
-and then you can import it like any other Python package.
-
-```python
-import pylomin
-...
-model = pylomin.lazy_loading(model)
-...
-```
-
-No need other 3rd party Python libraries except `torch`.
 
 ## Getting Started
 
