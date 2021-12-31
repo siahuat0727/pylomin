@@ -93,15 +93,6 @@ def lazy_loading(
     if load_wrapper is not None:
         load_weights_hook = load_wrapper(load_weights_hook)
 
-    def do_lazy_loading(func, module):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            data_porter.load_weights(module)
-            res = func(*args, **kwargs)
-            data_porter.release_weights(module)
-            return res
-        return wrapper
-
     for module in target_modules:
         data_porter.release_weights(module, first_time=True)
 
