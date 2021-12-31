@@ -110,14 +110,3 @@ def chunked_embedding(model, target_module_name, chunk_size=4096):
                                      chunk_size=chunk_size)
     rsetattr(model, target_module_name, new_embedding)
     return model
-
-
-def test_chunked_embedding():
-    embedding = nn.Embedding(42, 10)
-    indices = torch.arange(42).view(2, 21)
-    ground_truth = embedding(indices)
-
-    chunked_emedding = ChunkedEmbedding(embedding, chunk_size=5)
-    result = chunked_emedding(indices)
-
-    assert result.equal(ground_truth)
