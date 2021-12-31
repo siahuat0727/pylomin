@@ -84,9 +84,10 @@ def generate_prefetching_rule(model, input_ids, target_modules,
     # dummy inference
     get_model_forward(model, input_ids)()
 
-    assert len(target_modules) == len(module_order), (
-        (len(target_modules), len(module_order))
-    )
+    if len(target_modules) != len(module_order):
+        raise AssertionError(
+            (len(target_modules), len(module_order))
+        )
 
     peak_memory_list = [module.peak_memory for module in module_order]
 
@@ -103,7 +104,8 @@ def generate_prefetching_rule(model, input_ids, target_modules,
 
     def param_mem_range_sum(i, j):
         """ Get total param mem of modules in range [i, j] """
-        assert i <= j, (i, j)
+        if i > j:
+            raise AssertionError(i, j)
         return param_mem_prefixsum[j] - param_mem_prefixsum[i-1]
 
     module2name = {

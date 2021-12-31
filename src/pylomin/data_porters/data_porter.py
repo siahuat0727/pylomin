@@ -6,9 +6,9 @@ class DataPorter:
     @staticmethod
     def get_direct_parameters(module):
         # TODO: Don't access protected attribute (check if name contains dot?)
-        return module._parameters.items()
+        return module._parameters.items()  # pylint: disable=protected-access
 
     @staticmethod
     def get_direct_buffers(module):
         # TODO: Don't access protected attribute (check if name contains dot?)
-        return module._buffers.items()
+        return module._buffers.items()  # pylint: disable=protected-access

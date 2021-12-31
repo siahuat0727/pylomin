@@ -1,4 +1,3 @@
-import functools
 from itertools import chain
 
 from .data_porters import data_porter_factory
@@ -15,8 +14,8 @@ def to_device(module, device, skip_modules=None):
         if module in skip_modules:
             return
         # TODO: Don't access protected attribute
-        for _, tensor in chain(module._parameters.items(),
-                               module._buffers.items()):
+        for _, tensor in chain(module._parameters.items(),  # pylint: disable=protected-access
+                               module._buffers.items()):  # pylint: disable=protected-access
             if tensor is None:
                 continue
             tensor.data = tensor.data.to(device)
@@ -32,7 +31,7 @@ def get_default_target_modules(model, skip_modules=None):
 
     def has_direct_weights(module):
         # TODO: Don't access protected attribute
-        return module._parameters or module._buffers
+        return module._parameters or module._buffers  # pylint: disable=protected-access
 
     return (
         module
@@ -62,19 +61,21 @@ def lazy_loading(
         do_prefetch = prefetch_rule_file is not None
         data_porter_cls = data_porter_factory.get(
             (storage, do_prefetch))
-        assert data_porter_cls is not None, (
-            f'Not support storage={storage}'
-            f'prefetching={do_prefetch}'
-        )
+        if data_porter_cls is None:
+            raise AssertionError(
+                f'Not support storage={storage}'
+                f'prefetching={do_prefetch}'
+            )
         return data_porter_cls(model,
                                computing_device=device,
                                prefetch_rule_file=prefetch_rule_file,
                                weight_dir=output_dir)
 
     if target_classes is not None:
-        assert target_modules is None, (
-            'Can\'t accept both target_classes and target_modules'
-        )
+        if target_modules is not None:
+            raise AssertionError(
+                'Can\'t accept both target_classes and target_modules'
+            )
         skip_modules = set(skip_modules)
         target_modules = (
             module
@@ -92,15 +93,6 @@ def lazy_loading(
     load_weights_hook = data_porter.load_weights
     if load_wrapper is not None:
         load_weights_hook = load_wrapper(load_weights_hook)
-
-    def do_lazy_loading(func, module):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            data_porter.load_weights(module)
-            res = func(*args, **kwargs)
-            data_porter.release_weights(module)
-            return res
-        return wrapper
 
     for module in target_modules:
         data_porter.release_weights(module, first_time=True)

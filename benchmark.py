@@ -30,7 +30,8 @@ def get_inference_latency(forward, warmup_repeat=10, repeat=50, verbose=True):
             print(runtimes)
         return reduce_func(runtimes)
 
-    assert repeat > 0
+    if repeat <= 0:
+        raise AssertionError
 
     if warmup_repeat > 0:
         print('Warmup... ')
@@ -61,7 +62,8 @@ def evaluate(args, model, input_ids, apply_optimization, warmup_repeat=10, repea
     forward = get_model_forward(model, input_ids)
 
     if args.check_equal:
-        assert all(t1.equal(t2) for t1, t2 in zip(forward(), ground_truth))
+        if not all(t1.equal(t2) for t1, t2 in zip(forward(), ground_truth)):
+            raise AssertionError
         print('check correctness passed!')
         return
 
