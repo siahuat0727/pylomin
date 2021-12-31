@@ -1,5 +1,7 @@
 # Pylomin
 
+[![Tests](https://github.com/siahuat0727/pylomin/actions/workflows/tests.yml/badge.svg)](https://github.com/siahuat0727/pylomin/actions/workflows/tests.yml)
+
 Pylomin (**PY**torch **LO**w-**M**emory **IN**ference) is a deep learning optimization library for low-memory inferencing in PyTorch.
 
 ## Motivation
