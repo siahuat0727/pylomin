@@ -1,6 +1,5 @@
 import functools
 from itertools import chain
-from pathlib import Path
 
 from .data_porters import data_porter_factory
 
