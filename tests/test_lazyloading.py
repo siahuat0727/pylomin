@@ -25,9 +25,9 @@ def get_model_and_input():
         ('cuda', 'cpu', False),
         ('cuda', 'disk', False),
         ('cpu', 'disk', False),
-        ('cuda', 'cpu', True),
+        # ('cuda', 'cpu', True),
         # TODO ('cuda', 'disk', True),
-        ('cpu', 'disk', True),
+        # ('cpu', 'disk', True),
     ]
 )
 def test_lazyloading(device, storage, is_jit):
