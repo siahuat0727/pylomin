@@ -1,6 +1,5 @@
 import json
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from collections import Counter, defaultdict
+from collections import defaultdict
 from glob import glob
 from pathlib import Path
 
