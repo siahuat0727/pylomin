@@ -6,6 +6,24 @@ import torch.nn as nn
 from .utils import rgetattr, rsetattr
 
 
+def script_chunked_embedding(model, device):
+
+    def helper(module, name):
+        """name is need to modify the module itself"""
+        # for i in range(module.n_chunk):
+        for i in range(len(module.embedding_chunks)):
+            module.embedding_chunks[i] = torch.jit.trace(
+                module.embedding_chunks[i],
+                torch.zeros((1, 1), device=device).long()
+            )
+        rsetattr(model, name, torch.jit.script(module))
+
+    for name, module in model.named_modules():
+        if isinstance(module, ChunkedEmbedding):
+            helper(module, name)
+    return model
+
+
 class ChunkedEmbedding(nn.Module):
     def __init__(self, embedding, chunk_size=1000, dtype=None):
         super().__init__()

@@ -1,12 +1,11 @@
 import os
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
+import pylomin
 import torch
 import torch.nn as nn
+from pylomin.benchmark import evaluate
 from transformers import BertConfig, BertModel
-
-import pylomin
-from benchmark import evaluate
 
 
 def run(args):
@@ -59,21 +58,25 @@ def run(args):
 
     vocab_size = 119547
 
-    model = BertModel(BertConfig(
-        vocab_size=vocab_size,
-        hidden_size=1024,
-        num_hidden_layers=24,
-        num_attention_heads=16,
-        intermediate_size=4096,
-    )).eval()
+    def get_model():
+        model = BertModel(BertConfig(
+            vocab_size=vocab_size,
+            hidden_size=1024,
+            num_hidden_layers=24,
+            num_attention_heads=16,
+            intermediate_size=4096,
+        )).eval()
+        return model
 
-    input_ids = torch.randint(
-        vocab_size,
-        (args.batch_size, args.seq_len),
-        dtype=torch.long,
-    )
+    def get_input_ids():
+        input_ids = torch.randint(
+            vocab_size,
+            (args.batch_size, args.seq_len),
+            dtype=torch.long,
+        )
+        return input_ids
 
-    evaluate(args, model, input_ids, apply_optimization,
+    evaluate(args, get_model, get_input_ids, apply_optimization,
              args.warmup_repeat, args.repeat)
 
 
@@ -88,9 +91,6 @@ def main():
                                  'lazy-loading+prefetching',
                                  'lazy-loading+chunked-embedding'],
                         help='')
-    parser.add_argument('--check_equal',
-                        action='store_true',
-                        help="Whether to check equality")
     parser.add_argument('--device',
                         default='cpu',
                         help="Computing device")
